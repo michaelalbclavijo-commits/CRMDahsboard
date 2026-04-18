@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Dashboard CRM — Cuidado Capilar</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Serif+Display:ital@0;1&family=DM+Sans:wght@300;400;500;600&display=swap" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/Chart.js/4.4.1/chart.umd.js"></script>
+<style>
+  :root {
+    --cream: #FAF7F2;
+    --ink: #1A1208;
+    --sage: #4A7C59;
+    --sage-light: #D4E6DA;
+    --sage-mid: #8BB59A;
+    --amber: #C8820A;
+    --amber-light: #F5E6C8;
+    --rose: #B05068;
+    --rose-light: #F0D8DF;
+    --teal: #2A6E78;
+    --teal-light: #C8E3E6;
+    --violet: #5E4A8A;
+    --violet-light: #DDD5F0;
+    --warm-gray: #8A7E72;
+    --border: rgba(26,18,8,0.10);
+    --card-bg: #FFFFFF;
+    --font-display: 'DM Serif Display', Georgia, serif;
+    --font-body: 'DM Sans', sans-serif;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--cream);
+    font-family: var(--font-body);
+    color: var(--ink);
+    min-height: 100vh;
+  }
+
+  /* ─── HEADER ─── */
+  header {
+    background: var(--ink);
+    color: var(--cream);
+    padding: 2.5rem 3rem 2rem;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 1rem;
+  }
+  header .brand { display: flex; flex-direction: column; gap: 4px; }
+  header .eyebrow { font-size: 11px; letter-spacing: 0.15em; text-transform: uppercase; color: var(--sage-mid); font-weight: 500; }
+  header h1 { font-family: var(--font-display); font-size: 2.2rem; font-weight: 400; line-height: 1.1; }
+  header h1 em { color: var(--amber); font-style: italic; }
+  header .meta { font-size: 12px; color: rgba(250,247,242,0.45); text-align: right; line-height: 1.7; }
+
+  /* ─── KPI STRIP ─── */
+  .kpi-strip {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1px;
+    background: var(--border);
+    border-bottom: 1px solid var(--border);
+  }
+  .kpi {
+    background: var(--card-bg);
+    padding: 1.25rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+  }
+  .kpi .k-label { font-size: 10.5px; text-transform: uppercase; letter-spacing: 0.1em; color: var(--warm-gray); font-weight: 500; }
+  .kpi .k-value { font-family: var(--font-display); font-size: 2rem; color: var(--ink); line-height: 1; }
+  .kpi .k-sub { font-size: 11.5px; color: var(--warm-gray); }
+
+  /* ─── MAIN GRID ─── */
+  .main { padding: 2rem 2.5rem; display: grid; gap: 1.5rem; }
+
+  /* Row layouts */
+  .row-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+  .row-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 1.5rem; }
+  .row-wide { display: grid; grid-template-columns: 2fr 1fr; gap: 1.5rem; }
+
+  /* Card */
+  .card {
+    background: var(--card-bg);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+  }
+  .card-header { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; }
+  .card-title { font-family: var(--font-display); font-size: 1.2rem; font-weight: 400; }
+  .card-sub { font-size: 11.5px; color: var(--warm-gray); }
+  .card-tag {
+    font-size: 10px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.1em;
+    padding: 3px 8px; border-radius: 20px; white-space: nowrap;
+    background: var(--sage-light); color: var(--sage);
+  }
+  .card-tag.amber { background: var(--amber-light); color: var(--amber); }
+  .card-tag.rose  { background: var(--rose-light);  color: var(--rose);  }
+  .card-tag.teal  { background: var(--teal-light);  color: var(--teal);  }
+  .card-tag.violet{ background: var(--violet-light);color: var(--violet);}
+
+  .chart-wrap { position: relative; width: 100%; }
+  .chart-wrap.h200 { height: 200px; }
+  .chart-wrap.h260 { height: 260px; }
+  .chart-wrap.h300 { height: 300px; }
+  .chart-wrap.h360 { height: 360px; }
+  .chart-wrap.h420 { height: 420px; }
+  .chart-wrap canvas { position: absolute; inset: 0; }
+
+  /* Legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 14px; }
+  .legend-item { display: flex; align-items: center; gap: 5px; font-size: 11.5px; color: var(--warm-gray); }
+  .legend-dot { width: 9px; height: 9px; border-radius: 2px; flex-shrink: 0; }
+
+  /* Table */
+  .tbl-wrap { overflow-x: auto; border-radius: 8px; border: 1px solid var(--border); }
+  table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  thead th {
+    background: var(--ink); color: var(--cream);
+    padding: 8px 12px; text-align: left;
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.1em; font-weight: 500;
+  }
+  tbody tr { border-bottom: 1px solid var(--border); }
+  tbody tr:last-child { border-bottom: none; }
+  tbody tr:hover { background: var(--cream); }
+  td { padding: 7px 12px; color: var(--ink); }
+  td.center { text-align: center; }
+  .pill {
+    display: inline-block; padding: 2px 8px; border-radius: 20px; font-size: 10.5px; font-weight: 500;
+  }
+
+  /* Divider */
+  .section-label {
+    font-size: 10px; text-transform: uppercase; letter-spacing: 0.18em;
+    color: var(--warm-gray); font-weight: 600;
+    padding: 0.5rem 0 0.25rem;
+    border-top: 1px solid var(--border);
+  }
+
+  @media (max-width: 900px) {
+    .row-2, .row-3, .row-wide { grid-template-columns: 1fr; }
+    header { padding: 1.5rem; }
+    .main { padding: 1rem; }
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="brand">
+    <span class="eyebrow">CRM Analytics · 2024–2025</span>
+    <h1>Cuidado <em>Capilar</em><br>Dashboard</h1>
+  </div>
+  <div class="meta">50 clientas registradas<br>Datos generados para análisis interno</div>
+</header>
+
+<!-- KPI STRIP -->
+<div class="kpi-strip" id="kpiStrip"></div>
+
+<div class="main">
+
+  <div class="section-label">Demografía</div>
+
+  <div class="row-2">
+    <!-- Rango de edades -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Rango de edades</div>
+          <div class="card-sub">Distribución por grupo etario</div>
+        </div>
+        <span class="card-tag">Demografía</span>
+      </div>
+      <div class="chart-wrap h260"><canvas id="chartEdad"></canvas></div>
+      <div class="legend" id="legendEdad"></div>
+    </div>
+
+    <!-- Tipo de cabello -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Tipo de cabello</div>
+          <div class="card-sub">Liso · Ondulado · Rizado · Muy rizado</div>
+        </div>
+        <span class="card-tag amber">Perfil</span>
+      </div>
+      <div class="chart-wrap h260"><canvas id="chartCabello"></canvas></div>
+      <div class="legend" id="legendCabello"></div>
+    </div>
+  </div>
+
+  <div class="section-label">Comportamiento</div>
+
+  <div class="row-wide">
+    <!-- Visitas por mes (timeline) -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Visitas a lo largo del tiempo</div>
+          <div class="card-sub">Última visita registrada por mes (2024–2025)</div>
+        </div>
+        <span class="card-tag teal">Tendencia</span>
+      </div>
+      <div class="chart-wrap h300"><canvas id="chartTimeline"></canvas></div>
+    </div>
+
+    <!-- Visitas promedio por categoría -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Visitas por categoría</div>
+          <div class="card-sub">Promedio de visitas</div>
+        </div>
+        <span class="card-tag rose">Servicios</span>
+      </div>
+      <div class="chart-wrap h300"><canvas id="chartVisitasCat"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-label">Servicios</div>
+
+  <div class="row-2">
+    <!-- Servicios prestados por categoría -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Servicios por categoría</div>
+          <div class="card-sub">Cantidad total de clientes por tipo de servicio</div>
+        </div>
+        <span class="card-tag violet">Categorías</span>
+      </div>
+      <div class="chart-wrap h260"><canvas id="chartServicios"></canvas></div>
+      <div class="legend" id="legendServicios"></div>
+    </div>
+
+    <!-- Visitas totales acumuladas por categoría -->
+    <div class="card">
+      <div class="card-header">
+        <div>
+          <div class="card-title">Visitas acumuladas</div>
+          <div class="card-sub">Total de visitas (N° Visitas) por categoría</div>
+        </div>
+        <span class="card-tag teal">Acumulado</span>
+      </div>
+      <div class="chart-wrap h260"><canvas id="chartVisitasAcum"></canvas></div>
+    </div>
+  </div>
+
+  <div class="section-label">Detalle por cliente</div>
+
+  <!-- Scatter: ID vs Visitas coloreado por categoría -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Visitas por cliente (ID)</div>
+        <div class="card-sub">Cada punto es una clienta · coloreada por categoría de servicio</div>
+      </div>
+      <span class="card-tag amber">ID × Visitas</span>
+    </div>
+    <div class="chart-wrap h360"><canvas id="chartScatter"></canvas></div>
+    <div class="legend" id="legendScatter"></div>
+  </div>
+
+  <!-- Tabla completa -->
+  <div class="card">
+    <div class="card-header">
+      <div>
+        <div class="card-title">Registro de clientas</div>
+        <div class="card-sub">Todas las clientas ordenadas por ID</div>
+      </div>
+      <input id="searchInput" type="text" placeholder="Buscar nombre o servicio…"
+        style="font-size:12px;padding:5px 10px;border:1px solid var(--border);border-radius:6px;outline:none;font-family:var(--font-body);background:var(--cream);color:var(--ink);width:200px;"/>
+    </div>
+    <div class="tbl-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th><th>Nombre</th><th>Edad</th><th>Cabello</th>
+            <th>Servicio / Producto</th><th>Categoría</th><th>Última visita</th><th>Visitas</th>
+          </tr>
+        </thead>
+        <tbody id="tableBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+</div><!-- /main -->
+
+<script>
+const raw = [
+  {id:1,nombre:"Valentina González",edad:65,cabello:"Rizado",servicio:"Mascarilla Reparadora",cat:"Venta de producto",fecha:"13/01/2024",visitas:12},
+  {id:2,nombre:"Sofía Martínez",edad:19,cabello:"Liso",servicio:"Tratamiento",cat:"Tratamiento",fecha:"12/12/2024",visitas:12},
+  {id:3,nombre:"Camila Ríos",edad:59,cabello:"Liso",servicio:"Tratamiento",cat:"Tratamiento",fecha:"21/04/2024",visitas:4},
+  {id:4,nombre:"Isabella Vega",edad:28,cabello:"Rizado",servicio:"Ampolla de Keratina",cat:"Venta de producto",fecha:"22/04/2024",visitas:8},
+  {id:5,nombre:"Mariana Rodríguez",edad:23,cabello:"Ondulado",servicio:"Ampolla de Keratina",cat:"Venta de producto",fecha:"23/06/2024",visitas:5},
+  {id:6,nombre:"Daniela Sánchez",edad:20,cabello:"Rizado",servicio:"Keratina",cat:"Keratina",fecha:"19/02/2024",visitas:6},
+  {id:7,nombre:"Gabriela Muñoz",edad:58,cabello:"Muy rizado",servicio:"Cepillo Térmico",cat:"Venta de producto",fecha:"01/10/2024",visitas:2},
+  {id:8,nombre:"Natalia Martínez",edad:60,cabello:"Ondulado",servicio:"Hidratación",cat:"Hidratación",fecha:"17/03/2025",visitas:6},
+  {id:9,nombre:"Alejandra Romero",edad:24,cabello:"Liso",servicio:"Coloración",cat:"Coloración",fecha:"30/01/2025",visitas:5},
+  {id:10,nombre:"Juliana Castro",edad:31,cabello:"Rizado",servicio:"Keratina",cat:"Keratina",fecha:"22/05/2024",visitas:8},
+  {id:11,nombre:"Paola Cruz",edad:64,cabello:"Liso",servicio:"Tónico Capilar",cat:"Venta de producto",fecha:"25/12/2024",visitas:15},
+  {id:12,nombre:"Andrea Guerrero",edad:38,cabello:"Muy rizado",servicio:"Coloración",cat:"Coloración",fecha:"24/03/2024",visitas:8},
+  {id:13,nombre:"Carolina Ramos",edad:35,cabello:"Liso",servicio:"Tratamiento",cat:"Tratamiento",fecha:"27/04/2024",visitas:14},
+  {id:14,nombre:"Verónica Ramos",edad:59,cabello:"Rizado",servicio:"Tratamiento",cat:"Tratamiento",fecha:"18/04/2024",visitas:15},
+  {id:15,nombre:"Lucía Aguilar",edad:55,cabello:"Ondulado",servicio:"Keratina",cat:"Keratina",fecha:"14/03/2024",visitas:5},
+  {id:16,nombre:"María José Díaz",edad:49,cabello:"Rizado",servicio:"Keratina",cat:"Keratina",fecha:"25/10/2024",visitas:7},
+  {id:17,nombre:"Sara Sánchez",edad:61,cabello:"Liso",servicio:"Tratamiento",cat:"Tratamiento",fecha:"21/01/2025",visitas:1},
+  {id:18,nombre:"Ángela Díaz",edad:34,cabello:"Muy rizado",servicio:"Keratina",cat:"Keratina",fecha:"01/11/2024",visitas:2},
+  {id:19,nombre:"Fernanda Vega",edad:59,cabello:"Liso",servicio:"Hidratación",cat:"Hidratación",fecha:"16/03/2025",visitas:1},
+  {id:20,nombre:"Diana García",edad:64,cabello:"Muy rizado",servicio:"Corte",cat:"Corte",fecha:"27/02/2024",visitas:5},
+  {id:21,nombre:"Laura Romero",edad:58,cabello:"Ondulado",servicio:"Tónico Capilar",cat:"Venta de producto",fecha:"13/09/2024",visitas:13},
+  {id:22,nombre:"Adriana Vega",edad:28,cabello:"Ondulado",servicio:"Corte",cat:"Corte",fecha:"06/03/2025",visitas:11},
+  {id:23,nombre:"Mónica Reyes",edad:19,cabello:"Liso",servicio:"Hidratación",cat:"Hidratación",fecha:"02/02/2025",visitas:15},
+  {id:24,nombre:"Patricia Torres",edad:54,cabello:"Rizado",servicio:"Tratamiento",cat:"Tratamiento",fecha:"04/07/2024",visitas:15},
+  {id:25,nombre:"Claudia Vega",edad:52,cabello:"Muy rizado",servicio:"Tratamiento",cat:"Tratamiento",fecha:"13/02/2024",visitas:12},
+  {id:26,nombre:"Jimena Vargas",edad:51,cabello:"Muy rizado",servicio:"Coloración",cat:"Coloración",fecha:"06/03/2024",visitas:11},
+  {id:27,nombre:"Vanessa Ramos",edad:60,cabello:"Ondulado",servicio:"Hidratación",cat:"Hidratación",fecha:"04/08/2024",visitas:4},
+  {id:28,nombre:"Lorena Torres",edad:22,cabello:"Muy rizado",servicio:"Acondicionador Profundo",cat:"Venta de producto",fecha:"12/08/2024",visitas:15},
+  {id:29,nombre:"Beatriz García",edad:22,cabello:"Ondulado",servicio:"Corte",cat:"Corte",fecha:"11/01/2024",visitas:10},
+  {id:30,nombre:"Rosa López",edad:50,cabello:"Liso",servicio:"Shampoo Nutritivo",cat:"Venta de producto",fecha:"27/04/2024",visitas:2},
+  {id:31,nombre:"Yessenia Aguilar",edad:54,cabello:"Muy rizado",servicio:"Coloración",cat:"Coloración",fecha:"22/05/2024",visitas:11},
+  {id:32,nombre:"Angie Pérez",edad:24,cabello:"Muy rizado",servicio:"Hidratación",cat:"Hidratación",fecha:"30/08/2024",visitas:4},
+  {id:33,nombre:"Katherine Gómez",edad:64,cabello:"Rizado",servicio:"Tratamiento",cat:"Tratamiento",fecha:"03/12/2024",visitas:7},
+  {id:34,nombre:"Melissa Aguilar",edad:39,cabello:"Liso",servicio:"Tratamiento",cat:"Tratamiento",fecha:"10/12/2024",visitas:11},
+  {id:35,nombre:"Tatiana González",edad:45,cabello:"Ondulado",servicio:"Tratamiento",cat:"Tratamiento",fecha:"07/05/2024",visitas:4},
+  {id:36,nombre:"Lina Gómez",edad:53,cabello:"Ondulado",servicio:"Coloración",cat:"Coloración",fecha:"22/05/2024",visitas:8},
+  {id:37,nombre:"Marcela Hernández",edad:44,cabello:"Liso",servicio:"Tratamiento",cat:"Tratamiento",fecha:"26/01/2024",visitas:11},
+  {id:38,nombre:"Nathalia Ramos",edad:18,cabello:"Muy rizado",servicio:"Keratina",cat:"Keratina",fecha:"03/09/2024",visitas:4},
+  {id:39,nombre:"Viviana Ríos",edad:64,cabello:"Muy rizado",servicio:"Keratina",cat:"Keratina",fecha:"15/05/2024",visitas:15},
+  {id:40,nombre:"Sandra Morales",edad:31,cabello:"Muy rizado",servicio:"Hidratación",cat:"Hidratación",fecha:"04/12/2024",visitas:12},
+  {id:41,nombre:"Gloria Martínez",edad:21,cabello:"Liso",servicio:"Tratamiento",cat:"Tratamiento",fecha:"23/10/2024",visitas:12},
+  {id:42,nombre:"Esperanza López",edad:29,cabello:"Ondulado",servicio:"Hidratación",cat:"Hidratación",fecha:"01/09/2024",visitas:9},
+  {id:43,nombre:"Pilar Pardo",edad:54,cabello:"Ondulado",servicio:"Tratamiento",cat:"Tratamiento",fecha:"31/10/2024",visitas:2},
+  {id:44,nombre:"Olga Ortiz",edad:60,cabello:"Liso",servicio:"Coloración",cat:"Coloración",fecha:"23/10/2024",visitas:10},
+  {id:45,nombre:"Fabiola Guerrero",edad:63,cabello:"Rizado",servicio:"Hidratación",cat:"Hidratación",fecha:"16/10/2024",visitas:9},
+  {id:46,nombre:"Marta Gómez",edad:38,cabello:"Muy rizado",servicio:"Corte",cat:"Corte",fecha:"02/05/2024",visitas:5},
+  {id:47,nombre:"Amparo Díaz",edad:34,cabello:"Liso",servicio:"Tratamiento",cat:"Tratamiento",fecha:"05/01/2024",visitas:8},
+  {id:48,nombre:"Yolanda Morales",edad:28,cabello:"Liso",servicio:"Coloración",cat:"Coloración",fecha:"27/06/2024",visitas:15},
+  {id:49,nombre:"Cristina García",edad:60,cabello:"Rizado",servicio:"Keratina",cat:"Keratina",fecha:"02/03/2025",visitas:9},
+  {id:50,nombre:"Helena Rodríguez",edad:24,cabello:"Liso",servicio:"Hidratación",cat:"Hidratación",fecha:"02/06/2024",visitas:15},
+];
+
+const catColors = {
+  "Tratamiento":       { bg:"#4A7C59", light:"#D4E6DA" },
+  "Coloración":        { bg:"#C8820A", light:"#F5E6C8" },
+  "Corte":             { bg:"#B05068", light:"#F0D8DF" },
+  "Keratina":          { bg:"#5E4A8A", light:"#DDD5F0" },
+  "Hidratación":       { bg:"#2A6E78", light:"#C8E3E6" },
+  "Venta de producto": { bg:"#1A1208", light:"#E8E4DE" },
+};
+const cats = Object.keys(catColors);
+
+// ─── KPIs ───
+const avgEdad = Math.round(raw.reduce((a,r)=>a+r.edad,0)/raw.length);
+const avgVis  = (raw.reduce((a,r)=>a+r.visitas,0)/raw.length).toFixed(1);
+const topCat  = cats.reduce((a,c)=> raw.filter(r=>r.cat===c).length > raw.filter(r=>r.cat===a).length ? c : a, cats[0]);
+const maxVis  = Math.max(...raw.map(r=>r.visitas));
+const kpis = [
+  { label:"Total clientas",     value:"50",       sub:"registradas" },
+  { label:"Edad promedio",      value:avgEdad,     sub:"años" },
+  { label:"Visitas promedio",   value:avgVis,      sub:"por clienta" },
+  { label:"Servicio más popular", value:topCat,    sub:"mayor demanda" },
+  { label:"Máx. visitas",       value:maxVis,      sub:"una clienta" },
+];
+const kpiEl = document.getElementById('kpiStrip');
+kpis.forEach(k=>{
+  kpiEl.innerHTML += `<div class="kpi"><div class="k-label">${k.label}</div><div class="k-value">${k.value}</div><div class="k-sub">${k.sub}</div></div>`;
+});
+
+// ─── HELPERS ───
+function buildLegend(el, labels, colors){
+  el.innerHTML = labels.map((l,i)=>`
+    <div class="legend-item">
+      <div class="legend-dot" style="background:${colors[i]}"></div>
+      ${l}
+    </div>`).join('');
+}
+
+const gOpts = {
+  responsive: true, maintainAspectRatio: false,
+  plugins:{ legend:{ display:false } },
+  animation:{ duration: 700 }
+};
+
+// ─── 1. RANGO DE EDADES ───
+const ageGroups = {"18–28":0,"29–39":0,"40–55":0,"56–65":0};
+raw.forEach(r=>{
+  if(r.edad<=28) ageGroups["18–28"]++;
+  else if(r.edad<=39) ageGroups["29–39"]++;
+  else if(r.edad<=55) ageGroups["40–55"]++;
+  else ageGroups["56–65"]++;
+});
+const agePalette = ["#4A7C59","#C8820A","#B05068","#5E4A8A"];
+new Chart(document.getElementById('chartEdad'),{
+  type:'bar',
+  data:{
+    labels: Object.keys(ageGroups),
+    datasets:[{ data: Object.values(ageGroups), backgroundColor: agePalette, borderRadius:6, borderSkipped:false }]
+  },
+  options:{...gOpts, scales:{
+    x:{ grid:{display:false}, ticks:{font:{family:'DM Sans',size:12}} },
+    y:{ grid:{color:'rgba(0,0,0,0.05)'}, ticks:{stepSize:2,font:{family:'DM Sans',size:11}}, beginAtZero:true }
+  }}
+});
+buildLegend(document.getElementById('legendEdad'), Object.keys(ageGroups), agePalette);
+
+// ─── 2. TIPO DE CABELLO ───
+const hairTypes = {};
+raw.forEach(r=>{ hairTypes[r.cabello]=(hairTypes[r.cabello]||0)+1; });
+const hairPalette = ["#2A6E78","#C8820A","#4A7C59","#B05068"];
+const hairLabels = Object.keys(hairTypes);
+new Chart(document.getElementById('chartCabello'),{
+  type:'doughnut',
+  data:{
+    labels: hairLabels,
+    datasets:[{ data: Object.values(hairTypes), backgroundColor: hairPalette, borderWidth:2, borderColor:'#fff', hoverOffset:8 }]
+  },
+  options:{
+    ...gOpts,
+    cutout:'62%',
+    plugins:{
+      legend:{display:false},
+      tooltip:{
+        callbacks:{ label: ctx=>`  ${ctx.label}: ${ctx.parsed} clientas` }
+      }
+    }
+  }
+});
+buildLegend(document.getElementById('legendCabello'),
+  hairLabels.map((l,i)=>`${l} (${Object.values(hairTypes)[i]})`), hairPalette);
+
+// ─── 3. TIMELINE — visitas por mes ───
+function parseFecha(s){ const [d,m,y]=s.split('/'); return new Date(+y,+m-1,+d); }
+const monthCount = {};
+raw.forEach(r=>{
+  const dt = parseFecha(r.fecha);
+  const key = `${dt.getFullYear()}-${String(dt.getMonth()+1).padStart(2,'0')}`;
+  monthCount[key] = (monthCount[key]||0)+1;
+});
+const sortedMonths = Object.keys(monthCount).sort();
+const monthLabels = sortedMonths.map(k=>{
+  const [y,m]=k.split('-');
+  return new Date(+y,+m-1).toLocaleDateString('es-CO',{month:'short',year:'2-digit'});
+});
+new Chart(document.getElementById('chartTimeline'),{
+  type:'line',
+  data:{
+    labels: monthLabels,
+    datasets:[{
+      data: sortedMonths.map(k=>monthCount[k]),
+      borderColor:'#4A7C59', backgroundColor:'rgba(74,124,89,0.10)',
+      borderWidth:2, pointRadius:4, pointBackgroundColor:'#4A7C59',
+      fill:true, tension:0.4
+    }]
+  },
+  options:{...gOpts, scales:{
+    x:{ grid:{display:false}, ticks:{font:{family:'DM Sans',size:10}, maxRotation:45, autoSkip:false} },
+    y:{ grid:{color:'rgba(0,0,0,0.05)'}, ticks:{stepSize:1,font:{family:'DM Sans',size:11}}, beginAtZero:true }
+  }}
+});
+
+// ─── 4. VISITAS PROMEDIO POR CATEGORÍA ───
+const catAvgVis = {};
+cats.forEach(c=>{
+  const group = raw.filter(r=>r.cat===c);
+  catAvgVis[c] = group.length ? +(group.reduce((a,r)=>a+r.visitas,0)/group.length).toFixed(1) : 0;
+});
+new Chart(document.getElementById('chartVisitasCat'),{
+  type:'bar',
+  data:{
+    labels: cats.map(c=>c.replace(' de producto','\nproducto')),
+    datasets:[{
+      data: cats.map(c=>catAvgVis[c]),
+      backgroundColor: cats.map(c=>catColors[c].bg),
+      borderRadius:6, borderSkipped:false
+    }]
+  },
+  options:{...gOpts,
+    indexAxis:'y',
+    scales:{
+      x:{ grid:{color:'rgba(0,0,0,0.05)'}, ticks:{font:{family:'DM Sans',size:11}}, beginAtZero:true },
+      y:{ grid:{display:false}, ticks:{font:{family:'DM Sans',size:11}} }
+    }
+  }
+});
+
+// ─── 5. SERVICIOS POR CATEGORÍA (donut) ───
+const catCount = {};
+cats.forEach(c=>{ catCount[c]=raw.filter(r=>r.cat===c).length; });
+new Chart(document.getElementById('chartServicios'),{
+  type:'doughnut',
+  data:{
+    labels: cats,
+    datasets:[{ data: cats.map(c=>catCount[c]), backgroundColor: cats.map(c=>catColors[c].bg), borderWidth:2, borderColor:'#fff', hoverOffset:8 }]
+  },
+  options:{
+    ...gOpts, cutout:'55%',
+    plugins:{ legend:{display:false}, tooltip:{ callbacks:{ label: ctx=>`  ${ctx.label}: ${ctx.parsed}` }} }
+  }
+});
+buildLegend(document.getElementById('legendServicios'),
+  cats.map(c=>`${c} (${catCount[c]})`), cats.map(c=>catColors[c].bg));
+
+// ─── 6. VISITAS ACUMULADAS POR CATEGORÍA ───
+const catTotal = {};
+cats.forEach(c=>{ catTotal[c]=raw.filter(r=>r.cat===c).reduce((a,r)=>a+r.visitas,0); });
+new Chart(document.getElementById('chartVisitasAcum'),{
+  type:'bar',
+  data:{
+    labels: cats,
+    datasets:[{
+      data: cats.map(c=>catTotal[c]),
+      backgroundColor: cats.map(c=>catColors[c].light),
+      borderColor: cats.map(c=>catColors[c].bg),
+      borderWidth: 2, borderRadius:6, borderSkipped:false
+    }]
+  },
+  options:{...gOpts, scales:{
+    x:{ grid:{display:false}, ticks:{font:{family:'DM Sans',size:9}, maxRotation:35, autoSkip:false} },
+    y:{ grid:{color:'rgba(0,0,0,0.05)'}, ticks:{font:{family:'DM Sans',size:11}}, beginAtZero:true }
+  }}
+});
+
+// ─── 7. SCATTER ID × VISITAS ───
+const scatterDatasets = cats.map(c=>({
+  label: c,
+  data: raw.filter(r=>r.cat===c).map(r=>({x:r.id, y:r.visitas, nombre:r.nombre})),
+  backgroundColor: catColors[c].bg,
+  pointRadius: 7, pointHoverRadius: 10, borderWidth:0
+}));
+new Chart(document.getElementById('chartScatter'),{
+  type:'scatter',
+  data:{ datasets: scatterDatasets },
+  options:{
+    ...gOpts,
+    scales:{
+      x:{ title:{display:true,text:'ID Clienta',font:{family:'DM Sans',size:11}}, grid:{color:'rgba(0,0,0,0.05)'}, ticks:{stepSize:5, font:{family:'DM Sans',size:11}}, min:0, max:52 },
+      y:{ title:{display:true,text:'N° Visitas',font:{family:'DM Sans',size:11}}, grid:{color:'rgba(0,0,0,0.05)'}, ticks:{stepSize:2, font:{family:'DM Sans',size:11}}, min:0, max:17 }
+    },
+    plugins:{
+      legend:{ display:false },
+      tooltip:{ callbacks:{
+        label: ctx=>`${ctx.raw.nombre} · ${ctx.raw.y} visitas`
+      }}
+    }
+  }
+});
+buildLegend(document.getElementById('legendScatter'), cats, cats.map(c=>catColors[c].bg));
+
+// ─── TABLE ───
+const pillStyle = c=>`background:${catColors[c]?.light||'#eee'};color:${catColors[c]?.bg||'#333'}`;
+function renderTable(data){
+  document.getElementById('tableBody').innerHTML = data.map(r=>`
+    <tr>
+      <td class="center">${r.id}</td>
+      <td>${r.nombre}</td>
+      <td class="center">${r.edad}</td>
+      <td>${r.cabello}</td>
+      <td>${r.servicio}</td>
+      <td><span class="pill" style="${pillStyle(r.cat)}">${r.cat}</span></td>
+      <td class="center">${r.fecha}</td>
+      <td class="center">${r.visitas}</td>
+    </tr>`).join('');
+}
+renderTable(raw);
+document.getElementById('searchInput').addEventListener('input', function(){
+  const q = this.value.toLowerCase();
+  renderTable(raw.filter(r=>r.nombre.toLowerCase().includes(q)||r.servicio.toLowerCase().includes(q)||r.cat.toLowerCase().includes(q)));
+});
+</script>
+</body>
+</html>
